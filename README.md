@@ -35,20 +35,27 @@ The overlay is transparent, frameless, draggable, and stays on top of the game w
 
 ```
 telemetry-f1/
-├─ main.py                    # Main overlay application
-├─ debugger.py               # Standalone packet debugger
-├─ fto-icon.png              # App logo (source image)
-├─ fto-icon.ico              # App icon (Windows, multi-resolution)
-├─ LICENSE                   # MIT license
-├─ README.md                 # This file
-├─ pyproject.toml            # Build system + tool config
-├─ requirements.txt           # Runtime dependencies
-├─ requirements-dev.txt      # Dev + build dependencies
-├─ build_windows.bat         # One-command Windows build script
-├─ f1-telemetry-overlay.spec # PyInstaller spec file
+├─ main.py                       # Main overlay application
+├─ debugger.py                  # Standalone packet debugger
+├─ fto-icon.png                 # App logo (source image)
+├─ fto-icon.ico                 # App icon (Windows, multi-resolution)
+├─ LICENSE                      # MIT license
+├─ README.md                    # This file
+├─ INSTALLER.md                 # Installer build guide
+├─ pyproject.toml               # Build system + tool config
+├─ requirements.txt             # Runtime dependencies
+├─ requirements-dev.txt         # Dev + build dependencies
+├─ build_windows.bat            # Windows build script (exe + installer)
+├─ publish-release.bat         # Publish release to GitHub
+├─ f1-telemetry-overlay.spec   # PyInstaller spec file
+├─ f1-telemetry-overlay.iss    # Inno Setup installer script
+├─ .github/workflows/
+│   └─ release.yml              # GitHub Actions release workflow
 ├─ .gitignore
-├─ dist/                     # Built executable output
-│   └─ f1-telemetry-overlay.exe
+├─ dist/                        # Built executable output
+│   ├─ f1-telemetry-overlay.exe
+│   └─ installer/
+│       └─ F1TelemetryOverlay-Setup-1.0.0.exe
 └─ tests/
     ├─ __init__.py
     └─ test_telemetry_parser.py   # 23 tests, all passing
@@ -109,12 +116,14 @@ This script:
 2. Installs `requirements-dev.txt`
 3. Cleans previous `build/` and `dist/` folders
 4. Builds a one-file windowed executable with PyInstaller
-5. Bundles the app icon (`fto-icon.ico`) into the executable
+5. Builds a Windows installer with Inno Setup (if installed)
+6. Bundles the app icon (`fto-icon.ico`) into the executable
 
 ### Build output
 
 ```
 dist\f1-telemetry-overlay.exe
+dist\installer\F1TelemetryOverlay-Setup-1.0.0.exe  (if Inno Setup 6 is installed)
 ```
 
 The built executable is standalone — distribute just the `.exe` file.
@@ -133,6 +142,35 @@ python -m PyInstaller --noconfirm --clean --onefile --windowed \
 
 ---
 
+## Build Windows Installer
+
+The installer provides:
+- Proper installation to Program Files
+- Start Menu shortcuts
+- Desktop shortcut (optional)
+- Start with Windows option (optional)
+- Clean uninstallation
+
+### Prerequisites
+
+Install [Inno Setup 6](https://jrsoftware.org/isdl.php) before running the build script.
+
+### Build
+
+```bash
+build_windows.bat
+```
+
+The installer will be created at `dist\installer\F1TelemetryOverlay-Setup-1.0.0.exe`.
+
+For manual Inno Setup build:
+
+```cmd
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" f1-telemetry-overlay.iss
+```
+
+---
+
 ## Running the Executable
 
 The built `dist\f1-telemetry-overlay.exe` is a standalone windowed application:
@@ -140,6 +178,55 @@ The built `dist\f1-telemetry-overlay.exe` is a standalone windowed application:
 - Runs without needing Python installed
 - Shows F1 logo icon in taskbar and window title bar
 - Requires F1 25 to be running with UDP telemetry enabled on port `20725`
+
+---
+
+## Publishing to GitHub Releases
+
+### Option 1: Manual Upload
+
+1. Go to your GitHub repo → **Releases** → **Draft a new release**
+2. Create a tag (e.g., `v1.0.0`)
+3. Title: "F1 Telemetry Overlay v1.0.0"
+4. Drag & drop `F1TelemetryOverlay-Setup-1.0.0.exe`
+5. Publish release
+
+### Option 2: GitHub CLI Script
+
+1. Install [GitHub CLI](https://cli.github.com/)
+2. Authenticate: `gh auth login`
+3. Run the publish script:
+
+```cmd
+publish-release.bat v1.0.0
+```
+
+This will:
+- Create a Git tag
+- Push to remote
+- Create the GitHub release
+- Upload the installer as a release asset
+
+### Option 3: GitHub Actions (Automatic)
+
+Push a version tag to trigger automatic build and release:
+
+```cmd
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The workflow will:
+1. Build the Windows executable
+2. Create a GitHub release
+3. Upload the .exe as a release asset
+4. (If Inno Setup is available) Build and upload the installer
+
+To manually trigger a release workflow:
+1. Go to **Actions** tab in GitHub
+2. Select **Build and Release**
+3. Click **Run workflow**
+4. Enter version tag (e.g., `v1.0.0`)
 
 ---
 
@@ -242,4 +329,3 @@ CarTelemetryData (60 bytes per car):
 - Add system tray icon with minimize-to-tray option
 - Auto-detect game window and auto-hide when game is not focused
 - Add participant name verification for player index
-- Release pipeline to auto-build `.exe` on git tag
