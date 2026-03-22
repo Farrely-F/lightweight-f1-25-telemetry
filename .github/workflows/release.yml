@@ -11,6 +11,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+
 env:
   PYTHON_VERSION: "3.11"
 
@@ -39,15 +42,7 @@ jobs:
 
       - name: Build PyInstaller executable
         run: |
-          .\.venv\Scripts\python.exe -m PyInstaller `
-            --noconfirm `
-            --clean `
-            --onefile `
-            --windowed `
-            --name "f1-telemetry-overlay" `
-            --icon "fto-icon.ico" `
-            --add-data "fto-icon.ico;." `
-            main.py
+          .\.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --onefile --windowed --name "f1-telemetry-overlay" --icon "fto-icon.ico" --add-data "fto-icon.ico;." main.py
 
       - name: Copy icon to dist
         run: copy fto-icon.ico "dist\fto-icon.ico"
@@ -85,25 +80,24 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "VERSION_STRIPPED=${VERSION#v}" >> $GITHUB_OUTPUT
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.VERSION }}
-          name: "F1 Telemetry Overlay ${{ steps.version.outputs.VERSION_STRIPPED }}"
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          files: |
-            dist/f1-telemetry-overlay.exe
-            dist/fto-icon.ico
+      - name: Create Release with gh CLI
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.VERSION }}
+          VERSION_STRIPPED: ${{ steps.version.outputs.VERSION_STRIPPED }}
+        run: |
+          gh release create "$VERSION" \
+            --title "F1 Telemetry Overlay $VERSION_STRIPPED" \
+            --generate-notes \
+            dist/f1-telemetry-overlay.exe \
+            dist/fto-icon.ico
 
   build-installer:
     name: Build Windows Installer
     runs-on: windows-latest
     needs: [build, create-release]
     if: github.event.inputs.version != '' || startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -120,8 +114,7 @@ jobs:
         run: |
           $paths = @(
             "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
-            "C:\Program Files\Inno Setup 6\ISCC.exe",
-            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+            "C:\Program Files\Inno Setup 6\ISCC.exe"
           )
           foreach ($p in $paths) {
             if (Test-Path $p) {
@@ -140,9 +133,7 @@ jobs:
 
       - name: Upload installer to release
         if: steps.iscc.outputs.found == 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.inputs.version || github.ref }}
-          files: dist/installer/*.exe
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ github.event.inputs.version || github.ref }}
+        run: |
+          gh release upload "$VERSION" dist/installer/*.exe --clobber
