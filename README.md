@@ -1,3 +1,8 @@
+<div style="text-align: center;">
+  <img src="./fto-icon.png" alt="App Logo FTO" width="400" height="200">
+</div>
+
+
 # F1 25 Telemetry Overlay
 
 A lightweight Python overlay app that reads **F1 25 UDP telemetry** and displays live:

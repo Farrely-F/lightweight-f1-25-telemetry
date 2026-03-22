@@ -1,2 +1,3 @@
 -r requirements.txt
+PyQt5-stubs
 pyinstaller>=6.10,<7
