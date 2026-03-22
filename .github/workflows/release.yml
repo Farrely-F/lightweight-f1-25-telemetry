@@ -139,6 +139,9 @@ jobs:
         if: steps.iscc.outputs.found == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ github.event.inputs.version || github.ref }}
         run: |
-          gh release upload "$VERSION" dist/installer/*.exe --clobber
+          $version = "${{ github.event.inputs.version }}"
+          if ([string]::IsNullOrEmpty($version)) {
+            $version = "${{ github.ref }}".Replace("refs/tags/", "")
+          }
+          gh release upload "$version" dist/installer/*.exe --clobber
